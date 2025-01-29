@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Memory Game</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Ubuntu&display=swap');
+        body {
+            padding: 0;
+            margin: 0;
+        }
+
+        #center {
+            display: flex;
+            width: 100vw;
+            height: 100vh;
+            justify-content: center;
+            align-content: center;
+            gap: 2rem;
+            flex-wrap: wrap;
+            flex-direction: column;
+        }
+
+        #gameBoard {
+            display: grid;
+            height: fit-content;
+            gap: 2rem;
+            width: 90%;
+            grid-template-columns: repeat(auto-fill, 100px);
+        }
+
+        #gameBoard .card {
+            width: 100px;
+            height: 120px;
+        }
+
+        #gameBoard .card .card-inner {
+            position: relative;
+            font-family: "Ubuntu", serif;
+            font-weight: 400;
+            font-style: normal;
+            font-size: 2rem;
+            transform-style: preserve-3d;
+            transform: rotate3d(0, 1, 0, 0deg);
+            transition: all 0.5s ease-in-out;
+        }
+
+        #gameBoard .card.flip .card-inner {
+            transform: rotate3d(0, 1, 0, 180deg);
+            transition: all 0.5s ease-in-out;
+        }
+
+        #gameBoard .card:hover .card-inner .card-front {
+            scale: 1.1;
+            transition: all 0.5s ease-in-out;
+        }
+
+
+        #gameBoard .card .card-inner .card-front {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100px;
+            height: 120px;
+            background: conic-gradient(from 135deg, #dc1417 90deg, #0000 0) 24px calc(24px / 2),
+            conic-gradient(from 135deg, #a91518 90deg, #0000 0),
+            conic-gradient(from 135deg at 50% 0, #dc1417 90deg, #0000 0) #a91518;
+            backface-visibility: hidden;
+            background-size: 48px 24px;
+            color: white;
+            border-radius: 5px;
+            box-sizing: border-box;
+            border: 7px solid #3e9c38;
+            text-align: center;
+            line-height: 100px;
+            z-index: 2;
+        }
+
+        #gameBoard .card .card-inner .card-back {
+            position: absolute;
+            top: 0;
+            left: 0;
+            transform: rotate3d(0, 1, 0, 180deg);
+            width: 100px;
+            height: 120px;
+            background: linear-gradient(135deg, #0000 18.75%, #4b1011 0 31.25%, #0000 0),
+            repeating-linear-gradient(45deg, #4b1011 -6.25% 6.25%, #72181a 0 18.75%);
+            background-size: 48px 48px;
+            color: white;
+            border-radius: 5px;
+            box-sizing: border-box;
+            border: 7px solid #3e9c38;
+            text-align: center;
+            line-height: 100px;
+        }
+
+        @keyframes shake {
+            0% {
+                transform: rotate(0deg);
+            }
+            25% {
+                transform: rotate(5deg);
+            }
+            50% {
+                transform: rotate(-5deg);
+            }
+            75% {
+                transform: rotate(5deg);
+            }
+            100% {
+                transform: rotate(0deg);
+            }
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        #endMessage div {
+            font-family: "Ubuntu", serif;
+            font-weight: 400;
+            font-style: normal;
+            font-size: 2rem;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: #333;
+            color: white;
+            padding: 1rem;
+            border-radius: 1rem;
+            box-shadow: 0 0 1rem rgba(0, 0, 0, 0.5);
+        }
+
+        #endMessage {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        #moveCount {
+            font-family: "Ubuntu", serif;
+            font-weight: 400;
+            font-style: normal;
+            font-size: 2rem;
+            padding: 1rem;
+            position: absolute;
+            top: 0;
+            right: 0;
+            background-color: #333;
+            color: white;
+            border-radius: 1rem;
+            box-shadow: 0 0 1rem rgba(0, 0, 0, 0.5);
+            margin: 1rem;
+        }
+    </style>
+
+    <script type="module">
+        let cards = [];
+
+
+        let numberCards = 16;
+
+        let flippedCards = [];
+        let matchedCards = 0;
+        let moves = 0;
+        let posMouse = {x: 0, y: 0};
+
+        window.addEventListener("mousemove", (event) => {
+            posMouse = {x: event.clientX, y: event.clientY};
+        });
+
+        const gameBoard = document.getElementById('gameBoard');
+        const endMessage = document.getElementById('endMessage');
+        const moveCount = document.getElementById('moveCount');
+        const nbCards = document.getElementById('nbCards');
+
+        nbCards.addEventListener('input', () => {
+            numberCards = nbCards.value;
+            generateGame();
+        });
+
+        moveCount.textContent = "Moves: " + moves;
+
+        function generateGame() {
+            cards = [];
+            for (let i = 0 ; i<numberCards/2; i++) {
+                cards.push(Math.round(Math.random() * 99).toString());
+                cards.push(cards.at(-1))
+            }
+            let shuffledCards = shuffle(cards);
+            gameBoard.innerHTML = '';
+            matchedCards = 0;
+            moves = 0;
+            moveCount.textContent = "Moves: " + moves;
+            endMessage.classList.add('hidden');
+            // edit nbCards label
+            nbCards.labels[0].textContent = "Number of cards: " + numberCards;
+            flippedCards = [];
+            shuffledCards.forEach((card, index) => {
+                const cardElement = document.createElement('div');
+                cardElement.classList.add('card');
+                cardElement.setAttribute('data-id', index);
+
+                const cardInner = document.createElement('div');
+                cardInner.classList.add('card-inner');
+
+                const cardFront = document.createElement('div');
+                cardFront.classList.add('card-face', 'card-front');
+                cardFront.innerHTML = '?';
+
+                const cardBack = document.createElement('div');
+                cardBack.classList.add('card-face', 'card-back');
+                cardBack.innerHTML = card;
+
+                cardInner.appendChild(cardFront);
+                cardInner.appendChild(cardBack);
+                cardElement.appendChild(cardInner);
+                gameBoard.appendChild(cardElement);
+
+                cardElement.addEventListener('click', () => flipCard(cardElement, card));
+            });
+        }
+        generateGame();
+        let elementSelected = null;
+
+        setInterval(() => {
+            if (elementSelected) {
+                elementSelected.style.animation = "shake 0.5s";
+                setTimeout(() => {
+                    elementSelected.style.animation = "";
+                }, 500);
+            }
+        }, 1000);
+
+
+
+
+        // Shuffle function
+        function shuffle(array) {
+            let shuffled = [...array];
+            for (let i = shuffled.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+            }
+            return shuffled;
+        }
+
+        // Flip card function
+        function flipCard(cardElement, card) {
+            if (flippedCards.length === 2 || cardElement.classList.contains('flip')) return;
+
+            moves++;
+            moveCount.textContent = "Moves: " + moves;
+
+            cardElement.classList.add('flip');
+            if (flippedCards.length === 0) elementSelected = cardElement;
+            flippedCards.push(cardElement);
+
+
+            if (flippedCards.length === 2) {
+                checkForMatch(cardElement);
+            }
+        }
+
+        // Check for match
+        function checkForMatch(cardElement) {
+            const [firstCard, secondCard] = flippedCards;
+
+            elementSelected = null;
+
+            if (firstCard.querySelector('.card-back').innerHTML === secondCard.querySelector('.card-back').innerHTML) {
+                matchedCards += 2;
+                flippedCards = [];
+                if (matchedCards === cards.length) {
+                    setTimeout(() => {
+                        endMessage.classList.remove('hidden');
+                    }, 500);
+                }
+            } else {
+
+                setTimeout(() => {
+                    firstCard.classList.remove('flip');
+                    secondCard.classList.remove('flip');
+                    flippedCards = [];
+                }, 1000);
+            }
+        }
+
+    </script>
+</head>
+<body>
+    <div id="center">
+        <div id="gameBoard"></div>
+        <div style="display: flex; justify-content: center; gap: 1rem;">
+            <label for="nbCards">Number of cards</label>
+            <input type="range" min="4" max="64" value="16" id="nbCards" step="2">
+        </div>
+    </div>
+    <div id="endMessage" class="hidden"><div>You won!</div></div>
+    <div id="moveCount"></div>
+
+</body>
+</html>
